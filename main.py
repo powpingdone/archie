@@ -5,6 +5,8 @@ import discord
 import os
 import asyncio as asio
 import aiosqlite as sqlite
+# local imports, add .py to see their contents
+from archve import *
 
 client = discord.Client()
 
@@ -20,9 +22,9 @@ async def on_message(message):
         return
     
     if message.content.startswith('-++'): # its a command
-        print(message.content,'command')
+        print(message.content,'command found')
     else: # do regular archival
-        print(message.content)
+        archive(message)
         
 # This creates the posts.db file which stores every single post, starting from
 # execution. The table created from this stores the posts with the following 
