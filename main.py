@@ -6,7 +6,7 @@ import os
 import asyncio as asio
 import aiosqlite as sqlite
 # local imports, add .py to see their contents
-from archve import *
+from archive import archive
 
 client = discord.Client()
 
@@ -24,7 +24,7 @@ async def on_message(message):
     if message.content.startswith('-++'): # its a command
         print(message.content,'command found')
     else: # do regular archival
-        archive(message)
+        post = await archive(message)
         
 # This creates the posts.db file which stores every single post, starting from
 # execution. The table created from this stores the posts with the following 
@@ -35,43 +35,25 @@ async def on_message(message):
 # TEXT embed: the embeds/files of the post, should be semicolon delimited 
 #   links to where the embeds are
 # TEXT channel: the channel that the post was posted in
+# This also creates the table for caching embeds so that they are only 
+# downloaded once per day using the following keys:
+# TEXT url: url of the attachment
+# TEXT filename: filename of the attachment
 async def genpostsdb():
     print('posts.db does not exist, creating...', end='')
     async with sqlite.connect('posts.db') as temp:
-        asio.run(temp.execute('''CREATE TABLE posts
-                     (date text, post text, user text,
-                      embed text, channel text)'''))
-        asio.run(temp.commit())
-    print('done!')
-
-# This creates the hashes.db files which prevents duplicate files from being
-# uploaded or stored. There are four types of files being hashed: audio,
-# video, images, and generic files. Each filetype hash is done differently
-# and is referenced in their respective funcs.
-# TODO: show the funcs in their respective files
-async def genhashesdb():
-    print('hashes.db does not exist, creating...', end='')
-    async with sqlite.connect('hashes.db') as temp:
-        await asio.gather(
-        temp.execute('''CREATE TABLE images
-                     (text url, text hash)'''),
-        temp.execute('''CREATE TABLE audio
-                     (text url, text hash)'''),
-        temp.execute('''CREATE TABLE video
-                     (text url, text hash)'''),
-        temp.execute('''CREATE TABLE other
-                     (text url, text hash)''')
-        )
-        asio.run(temp.commit())
+        await temp.execute('''CREATE TABLE posts
+                    (date TEXT, post TEXT, user TEXT,
+                    embed TEXT, channel TEXT)''')
+        await temp.execute('''CREATE TABLE embed_cache
+                    (url TEXT, filename TEXT)''')
+        await temp.commit()
     print('done!')
 
 # Main function. Calls setup funcs and then the main event loop in client.run 
 def main():
     if not os.path.exists('posts.db'):
-        asio.run(genpostsdb())
-    
-    if not os.path.exists('hashes.db'):
-        asio.run(genhashesdb())
+        await genpostsdb()
     
     client.run(open('botid').read().strip())
 
